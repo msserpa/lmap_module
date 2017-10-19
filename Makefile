@@ -1,5 +1,5 @@
 obj-m := lmap.o
-lmap-objs := pid.o probes.o migrate.o memory.o main.o
+lmap-objs := pid.o migrate.o memory.o main.o
 DEVNAME := lmap
 
 .PHONY: all clean
