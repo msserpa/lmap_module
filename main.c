@@ -1,5 +1,6 @@
 #include <linux/module.h>
 #include <linux/kprobes.h>
+#include <linux/kthread.h>
 #include <linux/migrate.h>
 
 MODULE_LICENSE("GPL");
@@ -18,15 +19,19 @@ inline int check_name(char *name) {
 
 extern int (*original_do_numa_page)(struct mm_struct *mm, struct vm_area_struct *vma, unsigned long addr, pte_t pte, pte_t *ptep, pmd_t *pmd);
 extern int (*do_numa_page)(struct mm_struct *mm, struct vm_area_struct *vma, unsigned long addr, pte_t pte, pte_t *ptep, pmd_t *pmd);
-extern int lu_do_numa_page(struct mm_struct *mm, struct vm_area_struct *vma, unsigned long addr, pte_t pte, pte_t *ptep, pmd_t *pmd);
+extern int lmap_do_numa_page(struct mm_struct *mm, struct vm_area_struct *vma, unsigned long addr, pte_t pte, pte_t *ptep, pmd_t *pmd);
 
 extern int (*original_numa_migrate_prep)(struct page *page, struct vm_area_struct *vma, unsigned long addr, int page_nid, int *flags);
 extern int (*numa_migrate_prep)(struct page *page, struct vm_area_struct *vma, unsigned long addr, int page_nid, int *flags);
-extern int lu_numa_migrate_prep(struct page *page, struct vm_area_struct *vma, unsigned long addr, int page_nid, int *flags);
+extern int lmap_numa_migrate_prep(struct page *page, struct vm_area_struct *vma, unsigned long addr, int page_nid, int *flags);
 
 extern int (*original_migrate_misplaced_page)(struct page *page, struct vm_area_struct *vma, int node);
 //extern int (*migrate_misplaced_page)(struct page *page, struct vm_area_struct *vma, int node);
-extern int lu_migrate_misplaced_page(struct page *page, struct vm_area_struct *vma, int node);
+extern int lmap_migrate_misplaced_page(struct page *page, struct vm_area_struct *vma, int node);
+
+extern int (*original_handle_pte_fault)(struct mm_struct *mm, struct vm_area_struct *vma, unsigned long address, pte_t *pte, pmd_t *pmd, unsigned int flags);
+extern int (*handle_pte_fault)(struct mm_struct *mm, struct vm_area_struct *vma, unsigned long address, pte_t *pte, pmd_t *pmd, unsigned int flags);
+extern int lmap_handle_pte_fault(struct mm_struct *mm, struct vm_area_struct *vma, unsigned long address, pte_t *pte, pmd_t *pmd, unsigned int flags);
 
 extern int lmap_get_tid(int pid);
 extern int lmap_delete_pid(int pid);
@@ -47,9 +52,10 @@ static void process_handler(struct task_struct *tsk){
 		printk("lmap : %s stop (pid %d, tid %d), #active: %d\n", tsk->comm, tsk->pid, tid, at);
 		if(at == 0){
 			printk("lmap : stop app %s (pid %d, tid %d)\n", tsk->comm, tsk->pid, tid);
-			// lmap_print_comm();
-			// print_stats();
-			// reset_stats();
+			/* lmap_print_comm();
+			print_stats();
+			reset_stats();
+			msserpa commented */
 		}
 		jprobe_return();
 	}
@@ -94,7 +100,6 @@ static struct jprobe process_probe = {
 	.kp.symbol_name = "acct_update_integrals",
 };
 
-
 static void lmap_probes_init(void) {
 	int ret;
 
@@ -103,7 +108,7 @@ static void lmap_probes_init(void) {
 	}
 	if ((ret=register_kretprobe(&thread_probe))) {
 		printk("lmap bug: _do_fork missing, %d\n", ret);
-	}
+	}	
 }
 
 static void lmap_probes_cleanup(void) {
@@ -117,13 +122,16 @@ int init_module(void) {
 	lmap_probes_init();
 
 	original_do_numa_page = do_numa_page;
-	do_numa_page = &lu_do_numa_page;
+	do_numa_page = &lmap_do_numa_page;
 
 	original_numa_migrate_prep = numa_migrate_prep;
-	numa_migrate_prep = &lu_numa_migrate_prep;
+	numa_migrate_prep = &lmap_numa_migrate_prep;
 
 	original_migrate_misplaced_page = migrate_misplaced_page;
-	migrate_misplaced_page = &lu_migrate_misplaced_page;
+	migrate_misplaced_page = &lmap_migrate_misplaced_page;
+
+	original_handle_pte_fault = handle_pte_fault;
+	handle_pte_fault = &lmap_handle_pte_fault;
 
 	printk(KERN_INFO "lamp: started!\n");
 
@@ -138,6 +146,7 @@ void cleanup_module(void){
 	do_numa_page = original_do_numa_page;
 	numa_migrate_prep = original_numa_migrate_prep;
 	migrate_misplaced_page = original_migrate_misplaced_page;
+	handle_pte_fault = original_handle_pte_fault;
 
 	printk(KERN_INFO "lmap: exit!\n");
 }
