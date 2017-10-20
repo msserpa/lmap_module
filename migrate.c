@@ -9,7 +9,7 @@ extern void putback_lru_page(struct page *page);
 int(*original_migrate_misplaced_page)(struct page *page, struct vm_area_struct *vma, int node);
 //extern int(*migrate_misplaced_page)(struct page *page, struct vm_area_struct *vma, int node);
 
-int lu_migrate_misplaced_page(struct page *page, struct vm_area_struct *vma, int node){
+int lmap_migrate_misplaced_page(struct page *page, struct vm_area_struct *vma, int node){
 	pg_data_t *pgdat = NODE_DATA(node);
 	int isolated;
 	int nr_remaining;
@@ -28,7 +28,7 @@ int lu_migrate_misplaced_page(struct page *page, struct vm_area_struct *vma, int
 	* all the time is being spent migrating!
 	*/
 
-	/*if(numamigrate_update_ratelimit(pgdat, 1)) //LU_MAP CHANGES
+	/*if(numamigrate_update_ratelimit(pgdat, 1))
 		goto out;*/
 
 	isolated = numamigrate_isolate_page(pgdat, page);

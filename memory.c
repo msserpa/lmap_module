@@ -4,7 +4,7 @@
 #include <linux/vmalloc.h>
 #include <linux/migrate.h>
 
-/*#include "libmapping/libmapping.h"*/
+#include "eagermap/libmapping.h"
 
 #define MAX_THREADS 4096
 #define LMAP_MEM_HASH_BITS 26
@@ -460,8 +460,8 @@ int lmap_handle_pte_fault(struct mm_struct *mm, struct vm_area_struct *vma, unsi
 	spinlock_t *ptl;
 	int tid = lmap_get_tid(current->pid);
 
-	/*if(tid > -1)
-		kmaf_check_comm(tid, address);*/
+	if(tid > -1)
+		lmap_check_comm(tid, address);
 
 	/*
 	* some architectures can have larger ptes than wordsize,

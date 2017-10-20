@@ -7,11 +7,11 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Matheus Serpa");
 MODULE_DESCRIPTION("automatic thread and data mapping");
 
-inline int check_name(char *name) {
+inline int check_name(char *name){
 	int len = strlen(name);
 
 	/* Only programs whose name ends with ".x" are accepted */
-	if (name[len-2] == '.' && name[len-1] == 'x')
+	if(name[len-2] == '.' && name[len-1] == 'x')
 		return 1;
 
 	return 0;
@@ -62,7 +62,7 @@ static void process_handler(struct task_struct *tsk){
 
 	// fs/exec.c
 	if(check_name(tsk->comm) && tid == -1 && !(tsk->flags & PF_EXITING)){
-		if(lmap_get_active_threads() == 0) {
+		if(lmap_get_active_threads() == 0){
 			lmap_pid_init();
 			tid = lmap_add_pid(tsk->pid);
 			printk("lmap : new process %s (pid %d, tid %d); #active: %d\n", tsk->comm, tsk->pid, tid, lmap_get_active_threads());
@@ -78,7 +78,7 @@ static void process_handler(struct task_struct *tsk){
 	jprobe_return();
 }
 
- // kernel/fork.c
+// kernel/fork.c
 static int thread_handler(struct kretprobe_instance *ri, struct pt_regs *regs){
 	int pid = regs_return_value(regs);
 
@@ -90,33 +90,32 @@ static int thread_handler(struct kretprobe_instance *ri, struct pt_regs *regs){
 	return 0;
 }
 
-static struct kretprobe thread_probe = {
+static struct kretprobe thread_probe ={
 	.handler = thread_handler,
 	.kp.symbol_name = "_do_fork",
 };
 
-static struct jprobe process_probe = {
+static struct jprobe process_probe ={
 	.entry = process_handler,
 	.kp.symbol_name = "acct_update_integrals",
 };
 
-static void lmap_probes_init(void) {
+static void lmap_probes_init(void){
 	int ret;
 
-	if ((ret=register_jprobe(&process_probe))) {
+	if((ret=register_jprobe(&process_probe)))
 		printk("lmap bug: acct_update_integrals missing, %d\n", ret);
-	}
-	if ((ret=register_kretprobe(&thread_probe))) {
+	
+	if((ret=register_kretprobe(&thread_probe)))
 		printk("lmap bug: _do_fork missing, %d\n", ret);
-	}	
 }
 
-static void lmap_probes_cleanup(void) {
+static void lmap_probes_cleanup(void){
 	unregister_jprobe(&process_probe);
 	unregister_kretprobe(&thread_probe);
 }
 
-int init_module(void) {
+int init_module(void){
 	printk(KERN_INFO "lmap: starting...\n");
 
 	lmap_probes_init();
@@ -145,6 +144,7 @@ void cleanup_module(void){
 
 	do_numa_page = original_do_numa_page;
 	numa_migrate_prep = original_numa_migrate_prep;
+
 	migrate_misplaced_page = original_migrate_misplaced_page;
 	handle_pte_fault = original_handle_pte_fault;
 

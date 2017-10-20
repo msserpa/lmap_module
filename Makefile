@@ -1,5 +1,5 @@
 obj-m := lmap.o
-lmap-objs := pid.o migrate.o memory.o main.o
+lmap-objs := pid.o migrate.o memory.o map.o eagermap/mapping-greedy.o eagermap/topology.o eagermap/lib.o eagermap/graph.o main.o
 DEVNAME := lmap
 
 .PHONY: all clean

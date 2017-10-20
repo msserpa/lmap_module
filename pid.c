@@ -9,8 +9,8 @@ struct pid_s{
 	int tid;
 };
 
-extern int do_tm; /* thread mapping */
-/* extern void set_aff(int pid, int tid); */
+extern int do_tm;
+extern void set_aff(int pid, int tid);
 
 static struct pid_s lmap_pid[lmap_PID_HASH_SIZE];
 static struct pid_s lmap_pid_reverse[lmap_PID_HASH_SIZE];
@@ -63,8 +63,8 @@ int lmap_add_pid(int pid){
 		atomic_inc_return(&lmap_active_threads);
 		lmap_pid_reverse[lmap_pid[h].tid] = lmap_pid[h];
 
-		/*if(do_tm)
-			set_aff(pid, lmap_pid[h].tid);*/
+		if(do_tm)
+			set_aff(pid, lmap_pid[h].tid);
 		return lmap_pid[h].tid;
 	}else
 		printk("lmap BUG: XXX pid collision: %d->%d\n", lmap_pid[h].pid, lmap_pid[h].tid);
