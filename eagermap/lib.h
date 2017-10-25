@@ -6,9 +6,8 @@
 #define lm_printf(...) printk(__VA_ARGS__)
 #define lm_fprintf(out, ...) printk(__VA_ARGS__)
 
-#define lm_calloc(count, tsize) vmalloc((count) * (tsize))
-#define lm_free(p) vfree(p)
-
+#define lm_calloc(count, tsize) kmalloc((count) * (tsize), GFP_KERNEL)
+#define lm_free(p) kfree(p)
 
 #define LM_ASSERT(V) LM_ASSERT_PRINTF(V, "bye!\n")
 

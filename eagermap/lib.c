@@ -41,13 +41,12 @@ void libmapping_matrix_free (void *m)
 void libmapping_comm_matrix_init (comm_matrix_t *m, uint32_t nthreads)
 {
 	m->matrix = (unsigned*) kmalloc (sizeof(unsigned) * nthreads * nthreads, GFP_KERNEL);
+	LM_ASSERT(m->matrix != NULL);
 	m->nthreads = nthreads;
 }
 
 
 void libmapping_comm_matrix_destroy (comm_matrix_t *m)
 {
-#ifdef _lmap
 	kfree(m->matrix);
-#endif
 }

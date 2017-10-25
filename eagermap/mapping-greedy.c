@@ -241,17 +241,8 @@ void* libmapping_mapping_algorithm_greedy_init (thread_map_alg_init_t *data)
 
 	groups = libmapping_matrix_malloc(levels_n, MAX_THREADS, sizeof(thread_group_t));
 
-#ifndef _lmap
 	libmapping_comm_matrix_init(&matrix_[0], MAX_THREADS);
 	libmapping_comm_matrix_init(&matrix_[1], MAX_THREADS);
-#else
-{
-	extern int max_threads;
-	libmapping_comm_matrix_init(&matrix_[0], max_threads);
-	libmapping_comm_matrix_init(&matrix_[1], max_threads);
-}
-#endif
-
 
 #if 1
 	lm_printf(PRINTF_PREFIX "there are %u shared levels\n", (levels_n >= 2) ? levels_n - 2 : 0);
