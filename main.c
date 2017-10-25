@@ -43,6 +43,8 @@ extern void lmap_mem_init(void);
 
 extern int lmap_map_func(void* v);
 
+extern void lmap_print_comm(void);
+
 static struct task_struct *lmap_map_thread;
 
 static void process_handler(struct task_struct *tsk){
@@ -54,10 +56,10 @@ static void process_handler(struct task_struct *tsk){
 		printk("lmap : %s stop (pid %d, tid %d), #active: %d\n", tsk->comm, tsk->pid, tid, at);
 		if(at == 0){
 			printk("lmap : stop app %s (pid %d, tid %d)\n", tsk->comm, tsk->pid, tid);
-			/* lmap_print_comm();
-			print_stats();
-			reset_stats();
-			msserpa commented */
+			lmap_print_comm();
+			// print_stats();
+			// reset_stats();
+			/* msserpa commented */
 		}
 		jprobe_return();
 	}
@@ -69,6 +71,7 @@ static void process_handler(struct task_struct *tsk){
 			tid = lmap_add_pid(tsk->pid);
 			printk("lmap : new process %s (pid %d, tid %d); #active: %d\n", tsk->comm, tsk->pid, tid, lmap_get_active_threads());
 			lmap_mem_init();
+			// lmap_map_func(NULL);
 			if(!lmap_map_thread)
 				lmap_map_thread = kthread_run(lmap_map_func, NULL, "lmap_map_thread");
 		}else{
@@ -141,6 +144,9 @@ int init_module(void){
 
 void cleanup_module(void){
 	printk(KERN_INFO "lmap: exiting...\n");
+
+	if(lmap_map_thread)
+		kthread_stop(lmap_map_thread);
 
 	lmap_probes_cleanup();
 

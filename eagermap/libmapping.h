@@ -5,7 +5,7 @@
 #include <linux/slab.h>
 
 #ifndef MAX_THREADS
-	#define MAX_THREADS 4096
+	#define MAX_THREADS 256
 #endif
 #define PRINTF_PREFIX "libmapping: "
 

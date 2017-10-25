@@ -12,7 +12,7 @@ static int draco_vec[] = {0,16,2,18,4,20,6,22,8,24,10,26,12,28,14,30,1,17,3,19,5
 static const int draco_len = sizeof(draco_vec)/sizeof(draco_vec[0]);
 
 void set_aff(int pid, int tid);
-int lmap_get_active_threads(void);
+extern int lmap_get_active_threads(void);
 extern unsigned matrix[MAX_THREADS*MAX_THREADS];
 
 #define for_each_sibling(s, cpu) for_each_cpu(s, topology_sibling_cpumask(cpu))
@@ -76,6 +76,7 @@ int lmap_map_func(void* v)
 	topo_init();
 	struct lmap_comm_matrix lmap_matrix = {.matrix = NULL, .nthreads = 0};
 
+	int ntO = 0;
 	int nt, i;
 	int arities[] = {num_nodes, num_cpus, num_cores, num_threads};
 	int nlevels =  sizeof(arities)/sizeof(arities[0]);
@@ -101,12 +102,13 @@ int lmap_map_func(void* v)
 	libmapping_topology_print(topo);
 
 	libmapping_mapping_algorithm_greedy_init(&data);
-	// printk("MATRIX::::::::::::::: %p\n", matrix);
+	printk("MATRIX::::::::::::::: %p\n", matrix);
 	while (1) {
 		if (kthread_should_stop())
 			break;
-
 		nt = lmap_get_active_threads();
+		if(nt != ntO)
+			printk("active_threads: %d\n", nt);
 		if (nt >= 4) {
 			thread_map_alg_map_t mapdata;
 			mapdata.m_init = &lmap_matrix;
@@ -132,6 +134,7 @@ int lmap_map_func(void* v)
 				oldmap[i] = -1;
 		}
 		msleep_interruptible(100);
+		ntO = nt;
 	}
 
 	libmapping_graph_destroy(&topo->graph);
@@ -154,5 +157,5 @@ void set_aff(int pid, int tid)
 	cpumask_set_cpu(core, &mask);
 
 	sched_setaffinity(pid, &mask);
-	printk("lmap: map tid %d to core %d\n", tid, core);
+	// printk("\nlmap: map tid %d to core %d\n", tid, core);
 }

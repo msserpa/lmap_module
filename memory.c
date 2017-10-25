@@ -6,7 +6,7 @@
 
 #include "eagermap/libmapping.h"
 
-#define MAX_THREADS 4096
+#define MAX_THREADS 256
 #define LMAP_MEM_HASH_BITS 26
 #define LMAP_SHIFT 12
 
@@ -311,7 +311,7 @@ static const struct file_operations matrix_ops ={
 
 
 void lmap_mem_init(void){
-	/* static struct proc_dir_entry *lmap_proc_root = NULL; */
+	 static struct proc_dir_entry *lmap_proc_root = NULL; 
 	if(!mem)
 		mem = vmalloc(sizeof(struct mem_s) *(1 << LMAP_MEM_HASH_BITS));
 
@@ -322,13 +322,13 @@ void lmap_mem_init(void){
 
 	memset(matrix, 0, sizeof(matrix));
 
-	/* if(!lmap_proc_root){
+	 if(!lmap_proc_root){
 		lmap_proc_root = proc_mkdir("lmap", NULL);
 		proc_create("pagestats", 0666, lmap_proc_root, &pagestats_ops);
 		proc_create("tm", 0666, lmap_proc_root, &tm_ops);
 		proc_create("matrix", 0666, lmap_proc_root, &matrix_ops);
 		proc_create("fac", 0666, lmap_proc_root, &fac_ops);
-	} */
+	} 
 }
 
 extern struct page *vm_normal_page(struct vm_area_struct *vma, unsigned long addr, pte_t pte);
