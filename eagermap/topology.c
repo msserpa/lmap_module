@@ -12,10 +12,7 @@ struct topology_walk_tmp_t {
 	uint32_t i, j;
 };
 
-topology_t libmapping_topology;
-
-// too lazy to replace topology to libmapping_topology
-#define topology libmapping_topology
+topology_t *libmapping_topology;
 
 #define dist(i, j) dist_[ ((i) << dist_dim_log) + (j) ]
 #define dist_pus(i, j) t->dist_pus_[ ((i) << t->dist_pus_dim_log) + (j) ]
@@ -127,7 +124,7 @@ void libmapping_topology_walk_pre_order (topology_t *topology, libmapping_topolo
 
 topology_t* libmapping_topology_get ()
 {
-	return &topology;
+	return libmapping_topology;
 }
 
 /*static void topology_walk_pos_order (libmapping_topology_walk_routine_t routine, vertex_t *v, vertex_t *from, edge_t *edge, void *data, uint32_t level)*/
@@ -161,7 +158,7 @@ static vertex_t* create_fake_topology (uint32_t level, uint32_t *arities, uint32
 	vertex_t *v, *link;
 	edge_t *e;
 /*printf("level %u with %u numa %u\n", level, *arities, numa_node);*/
-	v = libmapping_get_free_vertex(&topology.graph);
+	v = libmapping_get_free_vertex(&libmapping_topology->graph);
 
 	if (nlevels == 0) {
 		static uint32_t id = 0;
@@ -184,7 +181,7 @@ static vertex_t* create_fake_topology (uint32_t level, uint32_t *arities, uint32
 		}
 		for (j=0; j < *arities; j++) {
 			link = create_fake_topology(level+1, arities+1, nlevels-1, pus, (weights == NULL) ? NULL : weights+1, numa_node);
-			e = libmapping_graph_connect_vertices(&topology.graph, v, link);
+			e = libmapping_graph_connect_vertices(&libmapping_topology->graph, v, link);
 			if (weights == NULL)
 				e->weight = 1 << (nlevels);
 			else
@@ -248,7 +245,7 @@ static vertex_t* lm_hwloc_load_topology (hwloc_topology_t hwloc_topology, hwloc_
 	}
 #endif
 
-	v = libmapping_get_free_vertex(&topology.graph);
+	v = libmapping_get_free_vertex(&libmapping_topology->graph);
 	eweight = 1;
 
 	switch (obj->type) {
@@ -287,7 +284,7 @@ static vertex_t* lm_hwloc_load_topology (hwloc_topology_t hwloc_topology, hwloc_
 
 	for (i=0; i<obj->arity; i++) {
 		link = lm_hwloc_load_topology(hwloc_topology, obj->children[i]);
-		e = libmapping_graph_connect_vertices(&topology.graph, v, link);
+		e = libmapping_graph_connect_vertices(&libmapping_topology->graph, v, link);
 		e->weight = eweight;
 		e->type = GRAPH_ELTYPE_UNDEFINED;
 	}

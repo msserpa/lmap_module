@@ -43,6 +43,10 @@ extern void lmap_mem_init(void);
 
 extern int check_name(char *name);
 
+extern int lmap_map_func(void* v);
+
+static struct task_struct *lmap_map_thread;
+
 static void process_handler(struct task_struct *tsk){
 	int tid = lmap_get_tid(tsk->pid);
 
@@ -67,8 +71,8 @@ static void process_handler(struct task_struct *tsk){
 			tid = lmap_add_pid(tsk->pid);
 			printk("lmap : new process %s (pid %d, tid %d); #active: %d\n", tsk->comm, tsk->pid, tid, lmap_get_active_threads());
 			lmap_mem_init();
-			//if(!lmap_map_thread)
-				//lmap_map_thread = kthread_run(lmap_map_func, NULL, "lmap_map_thread");
+			if(!lmap_map_thread)
+				lmap_map_thread = kthread_run(lmap_map_func, NULL, "lmap_map_thread");
 		}else{
 			tid = lmap_add_pid(tsk->pid);
 			printk("lmap : new process %s (pid %d, tid %d); #active: %d\n", tsk->comm, tsk->pid, tid, lmap_get_active_threads());

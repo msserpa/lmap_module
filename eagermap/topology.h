@@ -26,7 +26,7 @@ typedef struct topology_t {
 	uint32_t *dist_pus_;
 } topology_t;
 
-extern topology_t libmapping_topology;
+extern topology_t *libmapping_topology;
 
 void libmapping_topology_init (void);
 void libmapping_topology_destroy (void);
@@ -38,7 +38,7 @@ static inline uint32_t libmapping_topology_dist_pus (topology_t *t, uint32_t pu1
 
 static inline uint32_t libmapping_topology_numa_node_of_pu (uint32_t pu)
 {
-	return libmapping_topology.pus_to_numa_node[pu];
+	return libmapping_topology->pus_to_numa_node[pu];
 }
 
 typedef int (*libmapping_topology_walk_routine_t)(void*, vertex_t*, vertex_t*, edge_t*, uint32_t);
