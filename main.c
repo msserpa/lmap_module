@@ -45,6 +45,8 @@ extern int lmap_map_func(void* v);
 
 extern void lmap_print_comm(void);
 
+extern void lmap_print_pages(void);
+
 static struct task_struct *lmap_map_thread;
 
 static void process_handler(struct task_struct *tsk){
@@ -57,6 +59,7 @@ static void process_handler(struct task_struct *tsk){
 		if(at == 0){
 			printk("lmap : stop app %s (pid %d, tid %d)\n", tsk->comm, tsk->pid, tid);
 			lmap_print_comm();
+			lmap_print_pages();
 			// print_stats();
 			// reset_stats();
 			/* msserpa commented */
@@ -71,7 +74,6 @@ static void process_handler(struct task_struct *tsk){
 			tid = lmap_add_pid(tsk->pid);
 			printk("lmap : new process %s (pid %d, tid %d); #active: %d\n", tsk->comm, tsk->pid, tid, lmap_get_active_threads());
 			lmap_mem_init();
-			// lmap_map_func(NULL);
 			if(!lmap_map_thread)
 				lmap_map_thread = kthread_run(lmap_map_func, NULL, "lmap_map_thread");
 		}else{
@@ -142,6 +144,8 @@ int init_module(void){
 	return 0;
 }
 
+// extern void lmap_proc_cleanup(void);
+
 void cleanup_module(void){
 	printk(KERN_INFO "lmap: exiting...\n");
 
@@ -149,6 +153,7 @@ void cleanup_module(void){
 		kthread_stop(lmap_map_thread);
 
 	lmap_probes_cleanup();
+	// lmap_proc_cleanup();
 
 	do_numa_page = original_do_numa_page;
 	numa_migrate_prep = original_numa_migrate_prep;

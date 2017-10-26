@@ -15,6 +15,7 @@ struct mem_s{
 	s16 sharer[2];
 	unsigned acc_n[8];
 	u16 nmig;
+	u16 rmig;
 };
 
 extern int check_name(char *name);
@@ -46,6 +47,7 @@ static inline struct mem_s* lmap_get_mem_init(unsigned long address){
 		elem->sharer[1] = -1;
 		memset(elem->acc_n, 0, sizeof(elem->acc_n));
 		elem->nmig = 0;
+		elem->rmig = 0;
 		elem->addr = page;
 	}
 
@@ -134,13 +136,65 @@ int lmap_check_dm(unsigned long address){
 		}
 	}
 	//printk(" max: %d max_old:%d\n", max, max_old);
-
+	elem->rmig++;
 	if(max > lmap_fac * (max_old + 1)){
-		elem->nmig++;
+		if(my_node != max_node)
+			elem->nmig++;
 		return max_node;
 	}
 
 	return -1;
+}
+
+
+void lmap_print_pages(void){
+	long i, j, pagenr = 0, elements = 1UL << LMAP_MEM_HASH_BITS;
+	int num_nodes = num_online_nodes();
+	unsigned ok;
+	unsigned max_acc_n[8];
+	u16 max_mig = 0;
+	u16 max_rmig = 0;
+
+	for(i = 0; i < num_nodes; i++)
+		max_acc_n[i] = 0;
+
+	printk("nr\taddr\t");
+	for(i = 0; i < num_nodes; i++)
+		printk("\tN%ld", i);
+	printk("\t#mig\t#rmig\n");
+
+	for(i = 0; i < elements; i++){
+		if(mem[i].addr != 0){
+			ok = 0;
+			pagenr++;
+			for(j = 0; j < num_nodes; j++)
+				if(mem[i].acc_n[j]){
+					ok = 1;
+					break;
+				}
+			if(ok){
+				printk("%ld\t%10lx", pagenr, mem[i].addr);
+				for(j = 0; j < num_nodes; j++){
+					if(mem[i].acc_n[j] > max_acc_n[j])
+						max_acc_n[j] = mem[i].acc_n[j];
+					printk("\t%u", mem[i].acc_n[j]);
+				}
+				if(mem[i].nmig > max_mig)
+					max_mig = mem[i].nmig;
+				if(mem[i].rmig > max_rmig)
+					max_rmig = mem[i].rmig;
+				printk("\t%u\t%u\n", mem[i].nmig, mem[i].rmig);
+			}
+		}
+	}
+
+	printk("\n");
+	for(i = 0; i < num_nodes; i++)
+		printk("\tN%ld", i);
+	printk("\t#rmig\t#amig\t#emig\n");
+	for(i = 0; i < num_nodes; i++)
+		printk("\t%u", max_acc_n[i]);
+	printk("\t%u\t%u\t%u\n", max_mig, max_rmig, max_rmig - max_mig);
 }
 
 void lmap_print_comm(void){
@@ -309,9 +363,9 @@ static const struct file_operations matrix_ops ={
 	.release = single_release,
 };
 
+// static struct proc_dir_entry *lmap_proc_root = NULL; 
 
 void lmap_mem_init(void){
-	 static struct proc_dir_entry *lmap_proc_root = NULL; 
 	if(!mem)
 		mem = vmalloc(sizeof(struct mem_s) *(1 << LMAP_MEM_HASH_BITS));
 
@@ -322,14 +376,23 @@ void lmap_mem_init(void){
 
 	memset(matrix, 0, sizeof(matrix));
 
-	 if(!lmap_proc_root){
-		lmap_proc_root = proc_mkdir("lmap", NULL);
-		proc_create("pagestats", 0666, lmap_proc_root, &pagestats_ops);
-		proc_create("tm", 0666, lmap_proc_root, &tm_ops);
-		proc_create("matrix", 0666, lmap_proc_root, &matrix_ops);
-		proc_create("fac", 0666, lmap_proc_root, &fac_ops);
-	} 
+	//  if(!lmap_proc_root){
+	// 	lmap_proc_root = proc_mkdir("lmap", NULL);
+	// 	proc_create("pagestats", 0666, lmap_proc_root, &pagestats_ops);
+	// 	proc_create("tm", 0666, lmap_proc_root, &tm_ops);
+	// 	proc_create("matrix", 0666, lmap_proc_root, &matrix_ops);
+	// 	proc_create("fac", 0666, lmap_proc_root, &fac_ops);
+	// } 
 }
+
+// void lmap_proc_cleanup(void){
+// 	remove_proc_entry("fac", lmap_proc_root);
+// 	remove_proc_entry("matrix", lmap_proc_root);
+// 	remove_proc_entry("tm", lmap_proc_root);
+// 	remove_proc_entry("pagestats", lmap_proc_root);
+
+// 	remove_proc_entry("lmap", NULL);
+// }
 
 extern struct page *vm_normal_page(struct vm_area_struct *vma, unsigned long addr, pte_t pte);
 extern void task_numa_fault(int last_cpupid, int mem_node, int pages, int flags);
@@ -426,6 +489,8 @@ int lmap_do_numa_page(struct mm_struct *mm, struct vm_area_struct *vma, unsigned
 	target_nid = numa_migrate_prep(page, vma, addr, page_nid, &flags);
 	pte_unmap_unlock(ptep, ptl);
 	if(target_nid == -1){
+		if(check_name(current->comm))
+			printk("lmap: page %10lx was not migrate from %d\n", page_to_pfn(page), page_nid);
 		put_page(page);
 		goto out;
 	}
@@ -433,7 +498,7 @@ int lmap_do_numa_page(struct mm_struct *mm, struct vm_area_struct *vma, unsigned
 	/* Migrate to the requested node */
 	migrated = migrate_misplaced_page(page, vma, target_nid);
 	if(check_name(current->comm))
-		printk("lmap: page %p was %smigrate from %d to %d\n", page, migrated == 0 ? "not " : "", page_nid, target_nid);
+		printk("lmap: page %10lx was %smigrate from %d to %d\n", page_to_pfn(page), migrated == 0 ? "not " : "", page_nid, target_nid);
 	if(migrated){
 		page_nid = target_nid;
 		flags |= TNF_MIGRATED;
